@@ -1,0 +1,66 @@
+# FortiSwitch and FortiAP over SNMP
+
+Direct SNMP (v2c/v3) to a managed FortiSwitch or FortiAP is the only source for several
+facts the controller does not republish. It also has vendor-specific traps.
+
+## FortiSwitch
+
+- **`ifDescr` is the operator's port DESCRIPTION**, not a port name. Name a port from
+  `ifName` and fall back to `ifDescr` only when `ifName` is absent; otherwise a walk whose
+  `ifName` half failed renames `port9` to whatever is plugged into it, and that label becomes
+  an identity in every table keyed by interface name. Reconcile collected names against the
+  previous inventory: a real `ifName` wins, a label two ports claim resolves to nothing.
+- **LLDP-MIB local port ids** (`lldpLocPortId` / `lldpLocPortDesc`) also carry the description
+  on FortiSwitch; canonicalize the local interface through the `ifName` inventory before using
+  it as a join key, or one neighbor appears under two names.
+- **The FDB (Q-BRIDGE `dot1qTpFdbTable`, BRIDGE-MIB fallback) is indexed by row number, not by
+  MAC** — read the address COLUMN. A table that answered but decoded to zero rows means
+  "preserve what you had", not "empty".
+- **Trunks** come from the vendor scalar `fsTrunkMember` (`1.3.6.1.4.1.12356.106.3.1.0`). An
+  auto-created FortiLink/ICL trunk is named for the peer's serial **left-truncated to 15
+  characters**; match a peer by SUFFIX, never reconstruct, and never resolve an ambiguous tail.
+  Hand-configured LAGs carry operator names (`Storage Node 2`) — only a serial-shaped tail
+  (alphanumeric, ≥10 chars) goes to the peer lookup. The ifTable publishes no aggregation, so
+  this scalar is the only source of trunk → member edges on a directly polled switch.
+- A **FortiLink trunk interface leaves the ifTable while the link is down**. Preserve the row
+  as "down" when the peer is still active and reciprocates; deleting it makes a downed uplink
+  vanish at exactly the moment its down alert fires.
+- **Switch-port VLANs**: Q-BRIDGE `dot1qVlanStaticUntaggedPorts` / `EgressPorts` bitmaps; a
+  FortiSwitch echoes the untagged bitmap into egress, so derive tagged = egress − untagged.
+  Controller CMDB is the fallback when SNMP lacks it.
+- **PoE**: POWER-ETHERNET-MIB `pethPsePortTable` where present. Only a walk that ANSWERED may be
+  cached as "no PSE"; an error `.catch()`-ed into an empty map blanks PoE for the whole cache TTL.
+- **MCLAG** peers: the vendor ICL port table; `peerSn` is the pairing key.
+- **ENTITY-MIB** (`entPhysicalTable`) gives transceivers/PSUs/fans with serial + model for RMAs.
+  Do not correlate `entPhysical*` to interfaces by index; it is right often enough to look
+  correct and silently wrong the rest of the time.
+- SNMP is often DISABLED on managed switches/APs by default; expect `allowaccess` without
+  `snmp` and fall back to the controller's REST tables.
+
+## FortiAP
+
+- The vendor FortiAP MIB (`fapRadioTable`, `fapVapTable`) is the only source for CONFIGURED
+  and MAXIMUM tx power, radio mode and country; the controller's `wifi/managed_ap` `radio[]`
+  gives the operating percentage of the ceiling. **The MIB has no `UNITS` clause** — store the
+  bare integers and render them without a unit rather than labeling them dBm on a guess;
+  converting between percentage and the bare value needs a per-model ceiling you do not have.
+- The two sources disagree on VAP NAMES (FortiOS publishes the VAP object name, the MIB only
+  the SSID). Match VAP rows on **BSSID** first and treat the name as an attribute, or each
+  source inserts its own row and deletes the other's every pass. Several VAPs commonly share
+  one SSID, so SSID is never an identity.
+- Merge the two sources PER COLUMN (a null from a source that does not collect a column must
+  not erase the other's value); radio identity is not merged — a radio index absent from a
+  scrape is gone along with its VAPs.
+- Station tables (`AssetWirelessStation`-style) join to VAPs on BSSID.
+
+## General SNMP discipline (applies to both)
+
+- An absent or error varbind decodes to **null, never 0**: `Number(null) === 0` turns every
+  unpublished OID into a confident zero and suppresses fallbacks guarded on `== null`.
+- ENTITY-SENSOR-MIB `entPhySensorOperStatus = unavailable(2)` maps to null, never alarm — an
+  empty SFP cage is not a fault. Prefer the device's own alarm bit over a threshold on the
+  reading.
+- Serialize all collectors against one agent (`host:port`) through a FIFO gate with a bounded
+  wait; one dead host's 60 s net-snmp timeout otherwise wedges every queued caller.
+- `sysDescr` self-reports are enrichment, not ownership: they say what the device claims to
+  be, never that anything holds it in an inventory.
