@@ -6,9 +6,14 @@ behavior only — no application-specific paths.
 
 ## Use it in another project
 
+Clone it once, then point Claude Code at the clone:
+
 ```
-claude --plugin-dir C:\Users\dmoore\VSCode\fortinet-api-conventions
+git clone https://github.com/davidmoore-rogers/fortinet-api-conventions.git
+claude --plugin-dir <path-to-clone>/fortinet-api-conventions
 ```
+
+`git pull` in the clone picks up a new version (check `version` in `.claude-plugin/plugin.json`).
 
 The skill `fortinet-api-conventions` auto-loads whenever code calls a FortiManager,
 FortiGate, FortiSwitch or FortiAP API or MIB, or debugs an FMG/FortiOS error. Invoke by hand
