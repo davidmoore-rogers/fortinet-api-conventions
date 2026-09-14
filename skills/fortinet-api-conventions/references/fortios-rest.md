@@ -40,6 +40,32 @@ reservation is cmdb; a lease is monitor. A managed switch's port descriptions ar
 port link state is monitor. Keep the two apart in your model — a "who owns this address"
 question is answered by cmdb, a "who is on this address right now" question by monitor.
 
+## Admission and connectivity are two different fields
+
+On both managed-device tables the controller reports **two independent axes**, and reading
+either one as "is this device healthy" is wrong.
+
+| | admission (has the operator authorized it) | connectivity (is the session up right now) |
+|---|---|---|
+| `managed-switch/status` | `state` — `"Authorized"` / `"Unauthorized"` | `status` — `"Connected"` / `"Disconnected"` |
+| `wifi/managed_ap` | `state` — `"authorized"` / `"discovered"` / … | `status` — `"online"` / `"connected"` / `"offline"` / `"discovered"` |
+
+A device is routinely authorized-but-offline (powered down, cable pulled) or
+discovered-but-connected (plugged in, never admitted). Note the case difference between the
+two tables, and that `"discovered"` appears as a value on BOTH axes of the AP row meaning
+different things.
+
+**The AP connectivity vocabulary varies by firmware**: most releases report `"online"`, some
+report `"connected"`. Match both or a healthy fleet reads as entirely offline. The switch
+table has no such variance — `"Connected"` is the only healthy value.
+
+**A device absent from the table is not the same as a device reported down.** It ages out
+briefly during a config push and after a controller reboot, so "not listed" is genuinely
+unknown; treating it as down produces a burst of false alarms on every push. For the same
+reason the `cmdb` roster is the stable answer to "which devices does this controller manage"
+while the `monitor` status table is only the answer to "what is their state right now" — a
+switch can be missing from the second while present in the first.
+
 ## Management access
 
 `allowaccess` on a `system/interface` object lists the protocols that interface accepts
