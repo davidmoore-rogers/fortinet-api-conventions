@@ -1,7 +1,7 @@
 {
   "name": "fortinet-api-conventions",
   "displayName": "Fortinet API conventions",
-  "version": "0.2.0",
-  "description": "FortiManager JSON-RPC and FortiOS REST conventions and traps: api-key Bearer auth and why /sys/logout must never be called, RPC fault classes and retry policy, proxy vs direct device transport, /dvmdb rosters and HA serial flips, CMDB vs monitor reads, the admission-vs-connectivity split on the managed-switch and managed-AP tables (and the firmware variance in the AP's status vocabulary), DHCP reservation/lease/VIP shapes, quarantine address groups, FortiSwitch and FortiAP SNMP quirks.",
+  "version": "0.2.1",
+  "description": "FortiManager JSON-RPC and FortiOS REST conventions and traps: api-key Bearer auth and why /sys/logout must never be called, RPC fault classes and retry policy, proxy vs direct device transport, /dvmdb rosters and HA serial flips, CMDB vs monitor reads, access-profile groups (system/global needs System, not Network), the admission-vs-connectivity split on the managed-switch and managed-AP tables (and the firmware variance in the AP's status vocabulary), DHCP reservation/lease/VIP shapes, quarantine address groups, FortiSwitch and FortiAP SNMP quirks.",
   "author": { "name": "Rogers Group — David Moore" }
 }

@@ -54,7 +54,7 @@ only; the app's own names are left out.
 | Topic | Read |
 |---|---|
 | JSON-RPC envelope, auth, fault classes, lanes, `/dvmdb`, ADOMs, offline gates, proxy field filtering, mirroring writes | [references/fmg-jsonrpc.md](references/fmg-jsonrpc.md) |
-| FortiOS REST: api-user tokens per gate, monitor vs cmdb paths, DHCP/ARP/system reads, managed-switch and managed-AP status, `allowaccess`, quarantine, per-model workarounds | [references/fortios-rest.md](references/fortios-rest.md) |
+| FortiOS REST: api-user tokens per gate, access-profile groups per CMDB tree, monitor vs cmdb paths, DHCP/ARP/system reads, managed-switch and managed-AP status, `allowaccess`, quarantine, per-model workarounds | [references/fortios-rest.md](references/fortios-rest.md) |
 | the data shapes behind IP management: DHCP server scopes, reserved addresses, leases, VIPs, interface IPs, what is device-owned vs assignable, lease release | [references/dhcp-vip-shapes.md](references/dhcp-vip-shapes.md) |
 | FortiSwitch / FortiAP SNMP: which tables, which quirks, which MIB objects have no units, trunk naming, PoE, VLAN bitmaps | [references/fortiswitch-fortiap-snmp.md](references/fortiswitch-fortiap-snmp.md) |
 

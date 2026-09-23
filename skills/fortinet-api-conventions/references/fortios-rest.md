@@ -33,6 +33,25 @@
 Always pass `vdom=` where the gate has VDOMs; many monitor endpoints default to the
 management VDOM only.
 
+## Access-profile groups gate writes per CMDB tree
+
+A REST API admin's access profile is granted per **group**, not per object, and the group
+a tree belongs to is not always the one its menu location suggests. The trap that bites:
+
+- `/api/v2/cmdb/system/global` (the device `alias`, hostname and other global settings) is
+  in the **System** group (`sysgrp`). `system/interface` — interface descriptions and
+  addresses — is in **Network** (`netgrp`). A profile with Network → Configuration Read-Write
+  and System read-only lets an interface-description PUT through and refuses the alias PUT
+  with a 403. A feature that writes both then looks half-working rather than broken.
+- System Read-Write also covers administrators, access profiles and every global setting.
+  There is no narrower grant that reaches `system/global`, so a token that needs it is
+  admin-grade; scope it with `trusthost`.
+- The same split applies when the writer reaches the gate directly while a FortiManager
+  manages it: the gate's own access profile authorizes the call, not FMG's admin profile.
+- Prove a grant before depending on it: `GET <path>?action=schema` returns the table's
+  definition including its `access_group`, which names the profile group for that build.
+  A plain GET proves read access only; the write can still be refused.
+
 ## CMDB vs monitor
 
 `cmdb` is configuration (what the operator set); `monitor` is state (what is happening). A
