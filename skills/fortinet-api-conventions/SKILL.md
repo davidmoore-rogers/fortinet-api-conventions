@@ -1,6 +1,6 @@
 ---
 name: fortinet-api-conventions
-description: "FortiManager JSON-RPC and FortiOS REST conventions and traps: api-key Bearer auth and why /sys/logout must never be called, RPC fault classes and retry policy, proxy vs direct device transport, /dvmdb rosters and HA serial flips, CMDB vs monitor reads, DHCP reservation/lease/VIP shapes, quarantine address groups, FortiSwitch and FortiAP SNMP quirks. Load whenever code calls a FortiManager, FortiGate, FortiSwitch or FortiAP API or MIB, or debugs an FMG/FortiOS error."
+description: "FortiManager JSON-RPC and FortiOS REST conventions and traps: api-key Bearer auth and why /sys/logout must never be called, RPC fault classes and retry policy, proxy vs direct device transport, /dvmdb rosters and HA serial flips, CMDB vs monitor reads, DHCP reservation/lease/VIP shapes, quarantine address groups, FortiSwitch and FortiAP SNMP quirks, the FortiSwitch / FortiAP local web-UI firmware-upgrade protocol (login forms, image header token = serial prefix, upload field order, deploy, reboot wait). Load whenever code calls a FortiManager, FortiGate, FortiSwitch or FortiAP API or MIB, or debugs an FMG/FortiOS error."
 ---
 
 # Fortinet API conventions
@@ -48,6 +48,11 @@ only; the app's own names are left out.
 10. **FortiSwitch and FortiAP SNMP lie in specific, documented ways** (see the SNMP
     reference): `ifDescr` is the operator's port description, the FDB is indexed by row number,
     trunk names are truncated peer serials, and the FortiAP MIB carries no `UNITS` clause.
+11. **A FortiSwitch or FortiAP flashes only through its OWN web UI** (see the local-HTTPS
+    reference): username + password to `/login` (switch) or `/logincheck` (AP), the image
+    header's platform token — the serial's first six characters — decides what an image is
+    for, the staged-upload fields go in a fixed order, and a dropped socket on deploy is
+    success. A FortiGate-managed AP usually has that UI disabled; there is no gate-side path.
 
 ## Which file
 
@@ -57,6 +62,7 @@ only; the app's own names are left out.
 | FortiOS REST: api-user tokens per gate, access-profile groups per CMDB tree, monitor vs cmdb paths, DHCP/ARP/system reads, managed-switch and managed-AP status, `allowaccess`, quarantine, per-model workarounds | [references/fortios-rest.md](references/fortios-rest.md) |
 | the data shapes behind IP management: DHCP server scopes, reserved addresses, leases, VIPs, interface IPs, what is device-owned vs assignable, lease release | [references/dhcp-vip-shapes.md](references/dhcp-vip-shapes.md) |
 | FortiSwitch / FortiAP SNMP: which tables, which quirks, which MIB objects have no units, trunk naming, PoE, VLAN bitmaps | [references/fortiswitch-fortiap-snmp.md](references/fortiswitch-fortiap-snmp.md) |
+| FortiSwitch / FortiAP LOCAL web UI over HTTPS — the firmware-upgrade protocol (login forms, image header token = serial prefix, staged upload field order, compat check, deploy, progress, reboot wait, verify; why a dropped socket is success) | [references/fortiswitch-fortiap-local-https.md](references/fortiswitch-fortiap-local-https.md) |
 
 ## Parity rule
 
