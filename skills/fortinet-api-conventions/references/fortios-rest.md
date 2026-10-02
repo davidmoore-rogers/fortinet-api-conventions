@@ -18,7 +18,7 @@
 | Need | Path | Notes |
 |---|---|---|
 | system status, hostname, serial, version | `/api/v2/monitor/system/status` | serial here is the chassis; HA cluster members differ |
-| interfaces + addresses | `/api/v2/cmdb/system/interface`, `/api/v2/monitor/system/interface` | cmdb = configured, monitor = live counters |
+| interfaces + addresses | `/api/v2/cmdb/system/interface`, `/api/v2/monitor/system/interface` | cmdb = configured, monitor = live counters. **monitor omits every `type tunnel` interface** (IPsec phase1-interfaces incl. ADVPN overlays, GRE, VXLAN) — read their name and `ip` from cmdb or they vanish from an inventory built on monitor |
 | DHCP servers / scopes | `/api/v2/cmdb/system/dhcp/server` | `reserved-address[]` lives INSIDE each server object |
 | DHCP leases | `/api/v2/monitor/system/dhcp` | per-scope lease table; supports `?scope=` |
 | ARP table | `/api/v2/monitor/network/arp` | L3 neighbor cache (IP, MAC, interface) |
