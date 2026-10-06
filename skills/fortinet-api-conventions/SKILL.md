@@ -1,6 +1,6 @@
 ---
 name: fortinet-api-conventions
-description: "FortiManager JSON-RPC and FortiOS REST conventions and traps: api-key Bearer auth and why /sys/logout must never be called, RPC fault classes and retry policy, proxy vs direct device transport, /dvmdb rosters and HA serial flips, CMDB vs monitor reads, DHCP reservation/lease/VIP shapes, quarantine address groups, FortiSwitch and FortiAP SNMP quirks, the FortiSwitch / FortiAP local web-UI firmware-upgrade protocol (login forms, image header token = serial prefix, upload field order, deploy, reboot wait). Load whenever code calls a FortiManager, FortiGate, FortiSwitch or FortiAP API or MIB, or debugs an FMG/FortiOS error."
+description: "FortiManager JSON-RPC and FortiOS REST conventions and traps: api-key Bearer auth and why /sys/logout must never be called, RPC fault classes and retry policy, proxy vs direct device transport, /dvmdb rosters and HA serial flips, CMDB vs monitor reads, DHCP reservation/lease/VIP shapes, quarantine address groups, FortiSwitch and FortiAP SNMP quirks, the FortiSwitch / FortiAP local web-UI firmware-upgrade protocol (login forms, image header token = serial prefix, upload field order, deploy, reboot wait), the FortiGate admin session login (/api/v2/authentication) and REST firmware upgrade. Load whenever code calls a FortiManager, FortiGate, FortiSwitch or FortiAP API or MIB, or debugs an FMG/FortiOS error."
 ---
 
 # Fortinet API conventions
@@ -9,7 +9,7 @@ Learned operating a fleet of ~190 FortiGates (mostly FortiManager-managed, some 
 ~780 FortiAPs and their FortiSwitches from a Node.js management application. Vendor behavior
 only; the app's own names are left out.
 
-## The ten rules
+## The rules
 
 1. **FortiManager auth is a permanent api-key over the `Authorization: Bearer` header.**
    FMG 7.4.7+ / 7.6.2+ removed `access_token` in the query string. A REST API Admin's api-key
@@ -53,6 +53,11 @@ only; the app's own names are left out.
     header's platform token — the serial's first six characters — decides what an image is
     for, the staged-upload fields go in a fixed order, and a dropped socket on deploy is
     success. A FortiGate-managed AP usually has that UI disabled; there is no gate-side path.
+12. **A FortiGate admin session is `POST /api/v2/authentication`, judged by its BODY** (see the
+    REST reference): JSON `{username, password}`; `LOGIN_FAILED` still sets session and
+    `ccsrf_token_<port>_<hash>` cookies, and `/logincheck` answers the login page on 7.6. A
+    FortiGate flashes through `monitor/system/firmware/upgrade` (`source=upload`, multipart
+    `file`); its `.out` is a gzip whose embedded name is the platform/version token.
 
 ## Which file
 

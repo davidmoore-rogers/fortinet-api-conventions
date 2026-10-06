@@ -13,6 +13,60 @@
   back to ICMP for reachability and to FMG's `/dvmdb` for state, and say so in the UI rather than
   letting a "rest_api" method silently collect nothing.
 
+## Admin session login (username + password)
+
+When a token is not available and an admin login is, sign in the way the 7.4+ GUI does — NOT
+through `/logincheck`. Seen on FortiGate 61F, FortiOS 7.6.7 build3704:
+
+- **`POST /logincheck` is dead for this.** It answers **200 with the (gzipped) login page** and
+  sets **no cookie**, whatever the password. A client that reads "200 + no error" as success, or
+  waits for a `ccsrftoken` cookie, simply never gets a session.
+- **Login:** `POST /api/v2/authentication`, JSON `{ "username": "...", "password": "..." }`.
+  The field is `password` — `secretkey` (the old form field) answers `LOGIN_FAILED`.
+- **The verdict is the BODY, never the cookies.** `{"status":6,"status_message":"LOGIN_SUCCESS"}`
+  on success; `{"status":-1,"status_message":"LOGIN_FAILED"}` on a bad password — and the gate
+  sets `session_key_<port>_<hash>` and `ccsrf_token_<port>_<hash>` cookies **on the failure too**.
+  Any other `status_message` is a prompt (two-factor, pre-login disclaimer, password change) a
+  script cannot answer: stop, don't retry — each attempt counts toward the admin lockout.
+- **The CSRF cookie is `ccsrf_token_<port>_<hash>`** (older builds: `ccsrftoken` /
+  `ccsrftoken_<port>_<id>`) — match `/^ccsrf_?token/`, strip surrounding quotes, echo it as
+  `X-CSRFTOKEN` on writes. The gate also names it, unauthenticated, in
+  `GET /api/v2/service/login-config` → `ccsrf_token_cookie_name`.
+- **Logout:** `DELETE /api/v2/authentication` → `HTTP_AUTHD_LOGOUT_SUCCESS` (did not require the
+  CSRF header). Pre-login state: `GET /api/v2/authentication-status` → `{ login_locked_out }`,
+  `GET /api/v2/authentication` → `{ authenticated }` — both unauthenticated, neither costs an
+  attempt.
+- An older build without the endpoint answers it with 401/404 or non-JSON: only a JSON
+  `status_message` decides anything, so fall back to `/logincheck` (form `ajax=1`, `username`,
+  `secretkey`; success = a `ccsrftoken` cookie) only then.
+- FortiOS gzips HTML answers even when the request sent no `Accept-Encoding`; inflate on
+  `content-encoding: gzip` (or the `1f 8b` magic) before reading a body.
+
+## Firmware upgrade (FortiGate)
+
+`POST /api/v2/monitor/system/firmware/upgrade` with `source=upload`. Seen on the same 61F
+(7.6.7 build3704 → 8.0.1 build245, 99.7 MB image), through a bearer token AND through the admin
+session above (with `X-CSRFTOKEN`):
+
+- **Multipart works:** a form field `source=upload` then the image in a `file` part, streamed
+  with a precomputed Content-Length — ~7 s for 99.7 MB on a LAN. (The documented alternative,
+  JSON `file_content` base64, inflates the body by 4/3; not needed here, and unproven.)
+- The answer comes ~8 s after the last byte; the gate **stops answering ~30 s later**, then the
+  web server comes back **before** the REST API — the first `monitor/system/status` after the
+  reboot got a dropped socket, the next one (20 s later) the new version. Total ~4.5–5 min.
+  Budget a retry loop for the version check, not a single read.
+- `GET /api/v2/monitor/system/firmware` → `results.current` `{version, major, minor, patch, build,
+  platform-id}` is a cheap pre-check that the token can read the firmware tree; `platform-id`
+  (`FGT61F`) is the image platform the gate expects.
+- **Image identity.** A FortiGate `.out` is a **gzip stream whose embedded file NAME is the header
+  token**, e.g. `FGT61F-8.00-FW-build0245-260909-patch01-F-260421`, inside the first 512 bytes:
+  platform (`FGT61F` = the serial's first six characters), `8.00` + `patch01` = 8.0.1, build 245 —
+  the same token shape the FortiSwitch image header carries, with the same `FW` marker.
+- Check `GET /api/v2/cmdb/system/ha` → `mode` before flashing: anything but `standalone` means
+  the upgrade reboots every cluster member.
+- The REST upload does **not** enforce Fortinet's supported upgrade path; a 7.6 → 8.0 jump was
+  accepted. Choosing a supported step is the caller's job.
+
 ## Paths
 
 | Need | Path | Notes |
